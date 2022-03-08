@@ -1,1 +1,1 @@
-../../../utils/version.sh
+../../../version.sh
