@@ -61,11 +61,13 @@ STOPSIGNAL SIGRTMIN+3
 # install Docker and other dependencies ((latest) git, jq, curl, etc.)
 RUN apt-install.sh                                                    \
        apt-transport-https                                            \
+       build-essential                                                \
        ca-certificates                                                \
        curl                                                           \
        gnupg-agent                                                    \
        jq                                                             \
-       software-properties-common &&                                  \
+       software-properties-common                                     \
+       wget &&                                                        \
                                                                       \
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg           \
          | apt-key add - &&                                           \
