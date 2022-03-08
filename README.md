@@ -44,7 +44,7 @@ in Docker (DinD) without having to rely on elevated privileges.
 | `ORG_RUNNER` | Only valid if using `ACCESS_TOKEN`. This will set the runner to an org runner. Default is 'false'. Valid values are 'true' or 'false'. If this is set to true you must also set `ORG_NAME` and makes `REPO_URL` unneccesary |
 | `ORG_NAME` | The organization name for the runner to register under. Requires `ORG_RUNNER` to be 'true'. No default value. |
 | `LABELS` | A comma separated string to indicate the labels. Default is 'default' |
-| `REPO_URL` | If using a non-organization runner this is the full repository url to register under such as 'https://github.com/msyea/repo' |
+| `REPO_URL` | If using a non-organization runner this is the full repository url to register under such as 'https://github.com/Mitigram/gh-runner-sysbox' |
 | `RUNNER_TOKEN` | If not using a PAT for `ACCESS_TOKEN` this will be the runner token provided by the Add Runner UI (a manual process). Note: This token is short lived and will change frequently. `ACCESS_TOKEN` is likely preferred. |
 | `RUNNER_WORKDIR` | The working directory for the runner. Runners on the same host should not share this directory. Default is '/_work'. This must match the source path for the bind-mounted volume at RUNNER_WORKDIR, in order for container actions to access files. |
 | `RUNNER_GROUP` | Name of the runner group to add this runner to (defaults to the default runner group) |
@@ -86,8 +86,8 @@ This image takes a lot of inspiration from:
   [fork]: https://github.com/efrecon/github-actions-runner-rootless
   [sysbox-runner]: https://github.com/PasseiDireto/gh-runner
 
-## Supported Platforms
+## Supported Arhitectures
 
-Supported platforms are amd64 (x86_64) and arm64 (aarch64), this is because
-these are the only two platforms for which the `compose-switch` project
-generates binaries for.
+Supported architectures are `amd64` (`x86_64`) and `arm64` (`aarch64`). This is
+because these are the only two architectures for which the
+[`compose-switch`][shim] project generates binaries for.
