@@ -30,18 +30,24 @@ while getopts "v:h-" opt; do
 done
 shift $((OPTIND-1))
 
-version() {
-  if command -v "version.sh" >/dev/null 2>&1; then
-    version.sh "$1"
+dependency() {
+  # shellcheck disable=SC3043 # local is implemented in almost all shells
+  local prg || true
+
+  prg=$1
+  shift
+
+  if command -v "${prg}.sh" >/dev/null 2>&1; then
+    "${prg}.sh" "$@"
   else
-    "$(dirname "$0")/version.sh" "$1"
+    "$(dirname "$0")/${prg}.sh" "$@"
   fi
 }
 
 # When latest version is specified, go and get the latest version of runner to
 # build upon.
 if [ "${RUNNER_VERSION}" = "latest" ] || printf %s\\n "${RUNNER_VERSION}" | grep -Eq '^[0-9a-f]{7}$'; then
-  RUNNER_VERSION=$(version "actions/runner")
+  RUNNER_VERSION=$(dependency version "actions/runner")
 fi
 
 # When the version number ends with a git sha, remove that and build with the
@@ -64,13 +70,7 @@ fi
 
 # Decide which URL to get the tar from, this depends on the current
 # architecture.
-case "$(uname --m)" in
-  'x86_64')
-    arch=x64;;
-  'aarch64')
-    arch=arm64;;
-  *) echo >&2 "error: unsupported architecture ($arch)"; exit 1 ;;
-esac
+arch=$(dependency arch -t "x86_64:x64 aarch64:amd64" -e 1)
 url=https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${arch}-${RUNNER_VERSION}.tar.gz
 
 # Download and install

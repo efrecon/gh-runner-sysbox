@@ -40,11 +40,17 @@ while getopts "s:c:h-" opt; do
 done
 shift $((OPTIND-1))
 
-version() {
-  if command -v "version.sh" >/dev/null 2>&1; then
-    version.sh "$1"
+dependency() {
+  # shellcheck disable=SC3043 # local is implemented in almost all shells
+  local prg || true
+
+  prg=$1
+  shift
+
+  if command -v "${prg}.sh" >/dev/null 2>&1; then
+    "${prg}.sh" "$@"
   else
-    "$(dirname "$0")/version.sh" "$1"
+    "$(dirname "$0")/${prg}.sh" "$@"
   fi
 }
 
@@ -62,7 +68,7 @@ fi
 
 # Decide version of compose
 if [ "$COMPOSE_VERSION" = "latest" ]; then
-  COMPOSE_VERSION=$(version "docker/compose")
+  COMPOSE_VERSION=$(dependency version "docker/compose")
 fi
 
 if [ "${COMPOSE_VERSION%%.*}" -ge "2" ]; then
@@ -76,17 +82,10 @@ if [ "${COMPOSE_VERSION%%.*}" -ge "2" ]; then
 
   # Decide version of shim
   if [ "$COMPOSE_SWITCH_VERSION" = "latest" ]; then
-    COMPOSE_SWITCH_VERSION=$(version "docker/compose-switch")
+    COMPOSE_SWITCH_VERSION=$(dependency version "docker/compose-switch")
   fi
 
-  case "$(uname --m)" in
-    'x86_64')
-      arch=amd64;;
-    'aarch64')
-      arch=arm64;;
-    *) echo >&2 "error: unsupported architecture ($arch)"; exit 1 ;;
-  esac
-  url=${COMPOSE_SWITCH_ROOT%/}/releases/download/v${COMPOSE_SWITCH_VERSION#v*}/docker-compose-$(uname -s|tr '[:upper:]' '[:lower:]')-${arch}
+  url=${COMPOSE_SWITCH_ROOT%/}/releases/download/v${COMPOSE_SWITCH_VERSION#v*}/docker-compose-$(uname -s|tr '[:upper:]' '[:lower:]')-$(dependency arch -e 1)
   $COMPOSE_DOWNLOAD "$url" > "${COMPOSE_DESTINATION%/}/docker-compose"
   chmod a+x "${COMPOSE_DESTINATION%/}/docker-compose"
 else

@@ -71,7 +71,7 @@ RUN apt-install.sh                                                    \
          | apt-key add - &&                                           \
     apt-key fingerprint 0EBFCD88 &&                                   \
     add-apt-repository                                                \
-       "deb [arch=amd64] https://download.docker.com/linux/ubuntu     \
+       "deb [arch=$(arch.sh -e 1)] https://download.docker.com/linux/ubuntu     \
        $(lsb_release -cs)                                             \
        stable" &&                                                     \
     apt-install.sh                                                    \
