@@ -8,7 +8,10 @@ Type=oneshot
 User=runner
 WorkingDirectory=/actions-runner
 ExecStart=/usr/local/bin/runner.sh
-ExecReload=/usr/local/bin/runner.sh
+# Prevents export of env vars to be run by runner user (as of User=)
+PermissionsStartOnly=true
+ExecStartPre=/usr/local/bin/export.sh /etc/runner/runner.conf
+EnvironmentFile=-/etc/runner/runner.conf
 
 [Install]
 WantedBy=multi-user.target

@@ -3,11 +3,6 @@ on:
   push:
     branches:
       - '*'
-    paths:
-      - '**.sh'
-      - 'Dockerfile*'
-      - '.github/actions/**'
-      - '.github/workflows/github-packages-publish.yml'
   workflow_dispatch:
 
 jobs:
