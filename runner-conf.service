@@ -1,0 +1,10 @@
+[Unit]
+Description=GitHub Runner Configuration Propagation
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/export.sh -u runner -- /etc/runner/runner.conf
+
+[Install]
+WantedBy=multi-user.target

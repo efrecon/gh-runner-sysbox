@@ -103,9 +103,12 @@ RUN install-runner.sh -v "${GH_RUNNER_VERSION}"
 USER root
 RUN ./bin/installdependencies.sh
 
-COPY runner.service /lib/systemd/system/
-RUN ln -sf /lib/systemd/system/runner.service                    \
-       /etc/systemd/system/multi-user.target.wants/runner.service
-
+COPY runner*.service /lib/systemd/system/
+RUN ln -sf \
+      /lib/systemd/system/runner.service \
+      /etc/systemd/system/multi-user.target.wants/ && \
+    ln -sf \
+      /lib/systemd/system/runner-conf.service \
+      /etc/systemd/system/multi-user.target.wants/
 # Set systemd as entrypoint.
 ENTRYPOINT [ "/sbin/init", "--log-level=err" ]
