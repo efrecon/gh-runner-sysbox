@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# This is an apt install wrapper that updates the package DB first, before
+# installing quietly and without recommended dependencies.
+
 set -eu
 
 apt-get update && \

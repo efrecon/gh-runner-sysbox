@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# Clean apt and remove all downloaded caches.
+
 set -eu
 
 apt-get clean -y

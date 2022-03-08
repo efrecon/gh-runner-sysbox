@@ -4,7 +4,8 @@ set -eu
 
 # This exports the environment to the file passed as an argument (stdout when
 # none given). "private" environment variables, and variables that are not in
-# uppercase are prevented from the export.
+# uppercase are prevented from the export. This script is also able to export
+# the environment of a given process (as long as it has enough permissions).
 
 # | separated list of regexp for variables that should be prevented from the
 # export.

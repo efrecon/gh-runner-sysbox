@@ -103,10 +103,10 @@ USER root
 RUN ./bin/installdependencies.sh
 
 # Copy and schedule service units
-COPY runner*.service /lib/systemd/system/
-RUN for s in runner*.service; do \
+COPY systemd/runner*.service /lib/systemd/system/
+RUN for s in systemd/runner*.service; do \
       ln -sf \
-        /lib/systemd/system/${s} \
+        /lib/systemd/system/$(basename "$s") \
         /etc/systemd/system/multi-user.target.wants/; \
     done
 

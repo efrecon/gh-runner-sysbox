@@ -134,13 +134,13 @@ jobs:
         id: ghcr
         uses: ./.github/actions/presence
         with:
-          image: ghcr.io/${{ github.repository }}/${{ inputs.image }}:${{ steps.semver.outputs.version }}-${{ steps.sha.outputs.sha }}
+          image: ghcr.io/${{ github.repository_owner }}/${{ inputs.image }}:${{ steps.semver.outputs.version }}-${{ steps.sha.outputs.sha }}
       - name: Publish Images to GHCR
         id: push
         if: steps.ghcr.outputs.present == 'false'
         uses: ./.github/actions/image
         with:
-          registry: ghcr.io/${{ github.repository }}
+          registry: ghcr.io/${{ github.repository_owner }}
           version: ${{ steps.semver.outputs.version }}
           platforms: ${{ inputs.platforms }}
           image: ${{ inputs.image }}

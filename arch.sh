@@ -1,5 +1,8 @@
 #!/bin/sh
 
+# This is a translator for the result of uname -m, as various projects have
+# different views on things, e.g. x86_64, x64, amd64 are used throughout.
+
 set -eu
 
 # Space separated list of architecture translation tokens. Each token uses the

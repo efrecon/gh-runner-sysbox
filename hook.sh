@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Given a PATH-like variable (e.g. directories separated by colon signs), this
+# will execute all executables that are directly in those directories, in
+# alphabetical order.
+
 for d in "$(dirname "$0")/lib" /usr/local/share/runner; do
   if [ -d "$d" ]; then
     for m in logger utils; do
