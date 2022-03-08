@@ -1,0 +1,30 @@
+name: Test Image Presence
+description: |
+  Test if an image is present at a registry. This will attempt to pull the
+  image, meaning that you need access rights to the remote registry.
+
+inputs:
+  image:
+    required: true
+    description: |
+      The fully-qualified name of the image to test existence for, i.e. with
+      registry root such as `ghcr.io` and also tag name.
+
+outputs:
+  present:
+    description: |
+      A boolean string, `true` or `false`, reporting over image presence.
+    value: ${{ steps.image.outputs.present }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check Images Presence
+      shell: bash
+      id: image
+      run: |
+        if docker image pull -q "${{ inputs.image }}"; then
+          echo "::set-output name=present::true"
+        else
+          echo "::set-output name=present::false"
+        fi

@@ -1,0 +1,176 @@
+name: Generic Release
+on:
+  workflow_call:
+    inputs:
+      project:
+        type: string
+        description: |
+          Name of the GitHub project that this release will follow. This is the
+          name of the project that the Docker image (below) builds upon in one
+          way or another.
+        required: true
+      image:
+        type: string
+        description: |
+          Name of the image to build, without tag, nor registry specification,
+          e.g. `ubuntu-git`.
+        required: true
+      platforms:
+        type: string
+        required: false
+        description: |
+          The comma-separated list of platforms to build for. This list should
+          be compatible with the docker/build-push-action@v2 action, and all
+          architectures supported within the Dockerfile, if relevant.
+        default: linux/amd64,linux/arm64
+      variable:
+        type: string
+        description: |
+          Name of the build-arg variable that will carry the version as of
+          `version`. This **must** match the content of the `dockerfile`
+        required: true
+      dockerfile:
+        type: string
+        required: true
+        description: |
+          Path to the Dockerfile to use for this build, relative from the root
+          of the project.
+      build-args:
+        type: string
+        required: false
+        description: |
+          Build arguments to pass further to the build, this should be lines of
+          `VAR=value` statements. Build arguments will be blindly passed to the
+          build step.
+      latest:
+        type: string
+        required: false
+        default: "false"
+        description: |
+          When set to `true` this will arrange to make the images generated the
+          `latest` one.
+      version:
+        type: string
+        required: false
+        description: |
+          The version of the `project` that we want to build an image for. Most
+          of the times, this should be empty, in which case the latest official
+          and stable release version of the project will be polled and used.
+    secrets:
+      username:
+        description: |
+          Name of user at the DockerHub, leaving it empty will not attempt to
+          build/push images at the DockerHub.
+        required: false
+      password:
+        description: |
+          Password/token for user at the DockerHub.
+        required: false
+    outputs:
+      version:
+        description: |
+          Version/tag of Docker image that was generated, i.e. either the short
+          git SHA, or the tag formed by the official version of the package
+          bundled to the git sha from this project.
+        value: ${{ jobs.build.outputs.version }}
+      image:
+        description: |
+          Fully qualified and tagged name of the image that was pushed.
+        value: ${{ jobs.build.outputs.image }}
+
+jobs:
+  build:
+    name: Build tagged image
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.semver.outputs.version }}
+      image: ${{ steps.push.outputs.image }}
+    # Secrets are not available to `if`. Instead, we create an environment
+    # variable holding a boolean telling if the username for access to the
+    # DockerHub is empty or not.
+    env:
+      HAVE_ACCESS: ${{ secrets.username != '' }}
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      # Compute git short SHA, as ${{ github.sha }} is the long one.
+      - name: Git short SHA
+        id: sha
+        shell: bash
+        run: printf '::set-output name=sha::%s\n' "$(git rev-parse --short HEAD)"
+
+      # Actively use the information from GitHub to acquire the latest, stable
+      # release version of the corresponding project. For all projects that are
+      # of interest to us, this action returns a pure SemVer, formatted as
+      # `major.minor.patch` (no leading `v`).
+      - name: Release Version
+        if: inputs.version == ''
+        id: project
+        uses: ./.github/actions/version
+        with:
+          project: ${{ inputs.project }}
+
+      - name: Project Version
+        id: semver
+        shell: bash
+        run: |
+          if [ -z "${{ inputs.version }}" ]; then
+            printf '::set-output name=version::%s\n' "${{ steps.project.outputs.version }}"
+          else
+            printf '::set-output name=version::%s\n' "${{ inputs.version }}"
+          fi
+
+      # Publish containers to the GHCR tagged with the latest version, if they
+      # do not already exist.
+      - name: Login to GHCR
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check Images Presence
+        id: ghcr
+        uses: ./.github/actions/presence
+        with:
+          image: ghcr.io/${{ github.repository }}/${{ inputs.image }}:${{ steps.semver.outputs.version }}-${{ steps.sha.outputs.sha }}
+      - name: Publish Images to GHCR
+        id: push
+        if: steps.ghcr.outputs.present == 'false'
+        uses: ./.github/actions/image
+        with:
+          registry: ghcr.io/${{ github.repository }}
+          version: ${{ steps.semver.outputs.version }}
+          platforms: ${{ inputs.platforms }}
+          image: ${{ inputs.image }}
+          variable: ${{ inputs.variable }}
+          dockerfile: ${{ inputs.dockerfile }}
+          latest: ${{ inputs.latest }}
+          build-args: ${{ inputs.build-args }}
+
+      # Publish containers to the DockerHub tagged with the latest version. This
+      # only happens if a DOCKERHUB_USERNAME is set.
+      - name: Login to DockerHub
+        if: env.HAVE_ACCESS == 'true'
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.username }}
+          password: ${{ secrets.password }}
+      - name: Check Images Presence
+        if: env.HAVE_ACCESS == 'true'
+        id: dockerhub
+        uses: ./.github/actions/presence
+        with:
+          image: ${{ github.repository_owner }}/${{ inputs.image }}:${{ steps.semver.outputs.version }}-${{ steps.sha.outputs.sha }}
+      - name: Publish Images to DockerHub
+        if: env.HAVE_ACCESS == 'true' && steps.dockerhub.outputs.present == 'false'
+        uses: ./.github/actions/image
+        with:
+          registry: ${{ github.repository_owner }}
+          version: ${{ steps.semver.outputs.version }}
+          platforms: ${{ inputs.platforms }}
+          image: ${{ inputs.image }}
+          variable: ${{ inputs.variable }}
+          dockerfile: ${{ inputs.dockerfile }}
+          latest: ${{ inputs.latest }}
+          build-args: ${{ inputs.build-args }}

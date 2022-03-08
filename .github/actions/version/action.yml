@@ -1,0 +1,30 @@
+name: Release Version
+description: |
+  Use information from GitHub to detect the latest release version of a project.
+  This action only returns pure SemVer, and skips all rc, etc. The action also
+  sets an environment variable formed as `<PROJ>_VERSION`, where `<PROJ>` is the
+  basename of the project, in uppercase, i.e. when requesting the version of
+  `actions/runner`, this would set the environment variable `RUNNER_VERSION` to
+  the value of the latest release
+
+inputs:
+  project:
+    required: true
+    description: |
+      The name of the project at GitHub, should be in the form
+      `organisation/name`, e.g. `actions/runner`.
+
+outputs:
+  version:
+    description: |
+      Latest released version of the project, as a pure SemVer with major, minor
+      and patch levels specified, e.g. 1.2.4. There will be no leading `v`.
+    value: ${{ steps.version.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Version
+      id: version
+      shell: bash
+      run: ${{ github.action_path }}/version.sh "${{ inputs.project }}"

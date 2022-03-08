@@ -1,0 +1,67 @@
+name: Follow Upstream Releases
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
+
+jobs:
+  runner:
+    name: GitHub Runner
+    uses: ./.github/workflows/_release.yml
+    with:
+      project: actions/runner
+      image: gh-runner-sysbox
+      variable: GH_RUNNER_VERSION
+      latest: ${{ github.ref == 'refs/heads/main' }}
+    secrets:
+      username: ${{ secrets.DOCKERHUB_USERNAME }}
+      password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+  release:
+    name: Release Runner
+    needs:
+      - runner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      # Detect Official latest non-prerelease version of the GH actions runner
+      # (as a pure SemVer).
+      - name: Runner SemVer
+        id: semver
+        uses: ./.github/actions/version
+        with:
+          project: actions/runner
+
+      # Detect our own latest release. This might fail if there are no release
+      # yet, but we'll continue anyway as this is a corner case.
+      - name: Own Release Version
+        id: own
+        continue-on-error: true
+        uses: ./.github/actions/version
+        with:
+          project: ${{ github.repository }}
+
+      # Create a release at GitHub, this arranges for the comparison step to
+      # work next time. Release is created last, so it acts as a marker that
+      # Docker image publication steps have succeeded. Release name contains
+      # leading `v`, release tag **without** the leading `v`.
+      - name: Create Release
+        if: steps.semver.outputs.version != steps.own.outputs.version
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.semver.outputs.version }}
+          name: v${{ steps.semver.outputs.version }}
+          body: |
+            Automatic release to match new GH Actions runner [release]. See all
+            versions and pull instructions [here][images]. Main generated GHCR
+            image called `${{ needs.runner.outputs.image }}`.
+
+            This image also exists without the git sha suffix, i.e. with only the
+            SemVer of the runner release as a tag: `${{ steps.semver.outputs.version }}`.
+
+              [release]: https://github.com/actions/runner/releases/tag/v${{ steps.semver.outputs.version }}
+              [images]: https://github.com/${{ github.repository }}/pkgs/container/gh-runner-sysbox
+          draft: false
+          prerelease: false
