@@ -107,6 +107,14 @@ runs:
         printf '::set-output name=now::%s\n' "$(date --iso-8601=seconds)"
         printf '::set-output name=branch::%s\n' "$(printf %s\\n "${{github.ref}}"|sed -E 's~refs/heads/~~')"
 
+    - name: Generate Fully-Qualified Image Name
+      id: image
+      shell: bash
+      # Little of a cheat on the pipe, but correct as the "function" and name
+      # are already lowercase.
+      run: |
+        printf '::set-output name=name::%s\n' "${{ inputs.registry }}/${{ inputs.image }}" | tr '[:upper:]' '[:lower:]'
+
     # Setup multi-platform support for Docker build
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v1
@@ -118,8 +126,7 @@ runs:
       uses: docker/build-push-action@v2
       with:
         file: ${{ inputs.dockerfile }}
-        tags: |
-          ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}
+        tags: ${{ steps.image.outputs.name }}:${{ env.PKG_VERSION_GITREF }}
         platforms: ${{ inputs.platforms }}
         push: true
         build-args: |
@@ -138,19 +145,19 @@ runs:
       if: env.PKG_VERSION_GITREF != env.PKG_VERSION
       uses: akhilerm/tag-push-action@v2.0.0
       with:
-        src: ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}
-        dst: ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION }}
+        src: ${{ steps.image.outputs.name }}:${{ env.PKG_VERSION_GITREF }}
+        dst: ${{ steps.image.outputs.name }}:${{ env.PKG_VERSION }}
 
     - name: Collect Generated Image Name
       id: name
       shell: bash
       run: |
-        printf '::set-output name=name::%s\n' "${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}"
+        printf '::set-output name=name::%s\n' "${{ steps.image.outputs.name }}:${{ env.PKG_VERSION_GITREF }}"
 
     # Make the images latest if necessary.
     - name: Make images latest
       if: fromJSON(inputs.latest)
       uses: akhilerm/tag-push-action@v2.0.0
       with:
-        src: ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}
-        dst: ${{ inputs.registry }}/${{ inputs.image }}:latest
+        src: ${{ steps.image.outputs.name }}:${{ env.PKG_VERSION_GITREF }}
+        dst: ${{ steps.image.outputs.name }}:latest
