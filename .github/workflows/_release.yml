@@ -31,7 +31,8 @@ on:
         required: true
       dockerfile:
         type: string
-        required: true
+        required: false
+        default: ./Dockerfile
         description: |
           Path to the Dockerfile to use for this build, relative from the root
           of the project.
