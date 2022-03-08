@@ -26,7 +26,7 @@ while getopts "x:u:p:h-" opt; do
     p) # PID to get environment from
       EXPORT_PID=$OPTARG;;
     h) # Print help and exit
-      echo "Export relevant environment to conf file";;
+      echo "Export relevant environment to conf file" && exit ;;
     -)
       break;;
     *)
@@ -34,6 +34,16 @@ while getopts "x:u:p:h-" opt; do
   esac
 done
 shift $((OPTIND-1))
+
+for d in "$(dirname "$0")/lib" /usr/local/share/runner; do
+  if [ -d "$d" ]; then
+    for m in logger utils; do
+      # shellcheck disable=SC1090
+      . "${d%/}/${m}.sh"
+    done
+    break
+  fi
+done
 
 dumpenv() {
   if [ -z "$EXPORT_PID" ]; then
@@ -45,11 +55,15 @@ dumpenv() {
 
 # Create directory to file, if necessary
 if [ "$#" -gt "0" ]; then
-  mkdir -p "$(dirname "$1")"
+  if ! [ -d "$(dirname "$1")" ]; then
+    mkdir -p "$(dirname "$1")"
+    INFO "Created destination directory $(dirname "$1")"
+  fi
 fi
 
 # Export selected part of the environment
 dumpenv | grep -E -e '^[A-Z_]+=' | grep -E -v "^(${EXPORT_PREVENT})=" > "${1:-/dev/stdout}"
+DEBUG "Exported environment subset to ${1:-/dev/stdout}"
 
 # Prevent access to file
 if [ "$#" -gt "0" ]; then

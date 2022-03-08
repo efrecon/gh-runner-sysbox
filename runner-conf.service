@@ -1,6 +1,11 @@
+# This "steals" (part of) the environment from the PID 1 process and dumps it
+# into a file that will be accessible to the `runner` user. This is essential as
+# parametrisation of the container happens through environment variables, and
+# systemd start all processes (units) from a CLEAN environment.
+
 [Unit]
 Description=GitHub Runner Configuration Propagation
-After=docker.service
+Before=docker.service
 
 [Service]
 Type=oneshot

@@ -1,5 +1,15 @@
 #!/bin/sh
 
+for d in "$(dirname "$0")/lib" /usr/local/share/runner; do
+  if [ -d "$d" ]; then
+    for m in logger; do
+      # shellcheck disable=SC1090
+      . "${d%/}/${m}.sh"
+    done
+    break
+  fi
+done
+
 _ORG_RUNNER=${ORG_RUNNER:-false}
 _GITHUB_HOST=${GITHUB_HOST:="github.com"}
 
@@ -24,7 +34,7 @@ _REPO="$(echo "${_PATH}" | cut -d/ -f2)"
 
 _FULL_URL="${URI}/repos/${_ACCOUNT}/${_REPO}/actions/runners/registration-token"
 if [ "${_ORG_RUNNER}" = "true" ]; then
-  [ -z "${ORG_NAME}" ] && ( echo "ORG_NAME required for org runners"; exit 1 )
+  [ -z "${ORG_NAME}" ] && ( ERROR "ORG_NAME required for org runners"; exit 1 )
   _FULL_URL="${URI}/orgs/${ORG_NAME}/actions/runners/registration-token"
   _SHORT_URL="${_PROTO}${_GITHUB_HOST}/${ORG_NAME}"
 else

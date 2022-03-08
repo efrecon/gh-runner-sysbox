@@ -9,6 +9,7 @@ ARG GH_RUNNER_VERSION="latest"
 ARG COMPOSE_VERSION=latest
 ARG COMPOSE_SWITCH_VERSION=latest
 
+COPY lib/*.sh /usr/local/share/runner/
 COPY *.sh /usr/local/bin/
 
 
