@@ -11,6 +11,28 @@ ARG COMPOSE_SWITCH_VERSION=latest
 
 COPY *.sh /usr/local/bin/
 
+
+# Build arguments for OCI-oriented information
+ARG OCI_GITHUB=https://github.com/Mitigram/gh-runner-sysbox
+ARG OCI_ORG=Mitigram
+ARG OCI_SHA=
+ARG OCI_BRANCH=main
+ARG OCI_DOCKERFILE=Dockerfile
+ARG OCI_RFC3339=
+
+# Dynamic OCI Labels
+LABEL org.opencontainers.image.authors="Emmanuel Frécon <https://github.com/efrecon>"
+LABEL org.opencontainers.image.url="${OCI_GITHUB}"
+LABEL org.opencontainers.image.documentation="${OCI_GITHUB}"
+LABEL org.opencontainers.image.source="${OCI_GITHUB}/blob/${OCI_BRANCH}/${OCI_DOCKERFILE}"
+LABEL org.opencontainers.image.vendor="${OCI_ORG}"
+LABEL org.opencontainers.image.version="${GH_RUNNER_VERSION}"
+LABEL org.opencontainers.image.revision="${OCI_SHA}"
+LABEL org.opencontainers.image.license="MIT"
+LABEL org.opencontainers.image.title="sysbox GitHub Runner"
+LABEL org.opencontainers.image.description="Dockerised GitHub Actions self-hosted runner using ubuntu and tuned for sysbox containers"
+LABEL org.opencontainers.image.created="${OCI_RFC3339}"
+
 #
 # Systemd installation
 #

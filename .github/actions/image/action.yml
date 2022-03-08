@@ -1,0 +1,156 @@
+name: Build&Publish an Image
+description: |
+  Publish one of our images to a registry. You need to be logged in at the
+  registry for this action to perform with success.
+
+inputs:
+  registry:
+    required: true
+    description: |
+      The root of the registry, including "username" to publish to, e.g.
+      msyea (to default to the docker hub), docker.io/msyea to make
+      DockerHub explicit, or ghcr.io/msyea.
+  version:
+    required: false
+    description: |
+      The version of the related software to use when building the image. Empty
+      for latest (and tag will be short SHA). When the version is a "real"
+      version, two images will be created: one with that version, and another
+      one with the version, followed by a dash, followed by the git SHA. This is
+      to be able to pinpoint images that would have been generated for a given
+      version of git and a given version of the project.
+  latest:
+    required: false
+    default: "false"
+    description: |
+      When set to `true` this will arrange to make the images generated the
+      `latest` one.
+  platforms:
+    required: false
+    default: linux/amd64,linux/arm64
+    description: |
+      The comma-separated list of platforms to build for. This list should be
+      compatible with the docker/build-push-action@v2 action, and all
+      architectures supported within the Dockerfile, if relevant.
+  dockerfile:
+    required: true
+    description: |
+      Path to the Dockerfile to use for this build, relative from the root of
+      the project.
+    default: ./Dockerfile
+  build-args:
+    required: false
+    description: |
+      Build arguments to pass further to the build, this should be lines of
+      `VAR=value` statements. Build arguments will be blindly passed to the
+      build step.
+  variable:
+    required: true
+    description: |
+      Name of the build-arg variable that will carry the version as of
+      `version`. This **must** match the content of the `dockerfile`
+  image:
+    required: true
+    description: |
+      Name of the image to build, without tag, nor registry specification, e.g.
+      `ubuntu-git`.
+
+outputs:
+  version:
+    description: |
+      Version/tag of Docker image that was generated, i.e. either the short git
+      SHA, or the tag formed by the official version of the package bundled to
+      the git sha from this project.
+    value: ${{ steps.output.outputs.version }}
+  image:
+    description: |
+      Fully qualified and tagged name of the image that was pushed.
+    value: ${{ steps.name.outputs.name }}
+
+runs:
+  using: composite
+  steps:
+    # Compute git short SHA, as ${{ github.sha }} is the long one.
+    - name: Git short SHA
+      id: sha
+      shell: bash
+      run: printf '::set-output name=sha::%s\n' "$(git rev-parse --short HEAD)"
+
+    # Guess the versions to use out of the values of the inputs and store these
+    # in the environment.
+    # + PKG_VERSION will be the incoming semver, or the git short SHA
+    #   (understood as latest, e.g. current official release at build time)
+    # + PKG_VERSION_GITREF will be the incoming semver, followed by a dash, then
+    #   the git short SHA, or the same as PKG_VERSION.
+    - name: Git Version
+      id: version
+      shell: bash
+      run: |
+        if [ -n "${{ inputs.version }}" ]; then
+          printf PKG_VERSION=%s\\n "${{ inputs.version }}" >> "$GITHUB_ENV"
+          printf PKG_VERSION_GITREF=%s-%s\\n "${{ inputs.version }}" "${{ steps.sha.outputs.sha }}" >> "$GITHUB_ENV"
+        else
+          printf PKG_VERSION=%s\\n "${{ steps.sha.outputs.sha }}" >> "$GITHUB_ENV"
+          printf PKG_VERSION_GITREF=%s\\n "${{ steps.sha.outputs.sha }}" >> "$GITHUB_ENV"
+        fi
+    # Set the output version.
+    - name: Output version
+      id: output
+      shell: bash
+      run: echo "::set-output name=version::${{ env.PKG_VERSION_GITREF }}"
+
+    # Discover dynamic variables for OCI labels
+    - name: Dynamic runtime Context
+      id: runtime
+      shell: bash
+      run: |
+        printf '::set-output name=now::%s\n' "$(date --iso-8601=seconds)"
+        printf '::set-output name=branch::%s\n' "$(printf %s\\n "${{github.ref}}"|sed -E 's~refs/heads/~~')"
+
+    # Setup multi-platform support for Docker build
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    # Build and Push the image to the remote registry, in turns.
+    - name: Build/Push image to Registry
+      uses: docker/build-push-action@v2
+      with:
+        file: ${{ inputs.dockerfile }}
+        tags: |
+          ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}
+        platforms: ${{ inputs.platforms }}
+        push: true
+        build-args: |
+          OCI_GITHUB=https://github.com/${{ github.repository }}
+          OCI_ORG=${{ github.repository_owner }}
+          OCI_SHA=${{ github.sha }}
+          OCI_BRANCH=${{ steps.runtime.outputs.branch }}
+          OCI_RFC3339=${{ steps.runtime.outputs.now }}
+          REGISTRY=${{ inputs.registry }}
+          ${{ inputs.variable }}=${{ env.PKG_VERSION }}
+          ${{ inputs.build-args }}
+        cache-from: type=gha,scope=${{ github.repository}}-${{ github.workflow }}-${{ github.job }}
+        cache-to: type=gha,mode=max,scope=${{ github.repository}}-${{ github.workflow }}-${{ github.job }}
+
+    - name: Make image primary release
+      if: env.PKG_VERSION_GITREF != env.PKG_VERSION
+      uses: akhilerm/tag-push-action@v2.0.0
+      with:
+        src: ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}
+        dst: ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION }}
+
+    - name: Collect Generated Image Name
+      id: name
+      shell: bash
+      run: |
+        printf '::set-output name=name::%s\n' "${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}"
+
+    # Make the images latest if necessary.
+    - name: Make images latest
+      if: fromJSON(inputs.latest)
+      uses: akhilerm/tag-push-action@v2.0.0
+      with:
+        src: ${{ inputs.registry }}/${{ inputs.image }}:${{ env.PKG_VERSION_GITREF }}
+        dst: ${{ inputs.registry }}/${{ inputs.image }}:latest
