@@ -9,61 +9,8 @@ on:
           Pure SemVer version of the official GitHub runner to generate a
           rootless Docker image for. NO LEADING `v`!
           see: https://github.com/actions/runner/releases
-      git:
-        required: false
-        description: |
-          Pure SemVer version of git to use in rootless Docker image. NO LEADING
-          `v`!
-          see: https://github.com/git/git/tags
-      docker:
-        required: false
-        description: |
-          Pure SemVer version of docker to use in rootless Docker image. NO
-          LEADING `v`!
-          see: https://github.com/moby/moby/releases
 
 jobs:
-  docker:
-    name: Docker (moby)
-    uses: ./.github/workflows/_release.yml
-    with:
-      project: moby/moby
-      image: ubuntu-docker
-      variable: DOCKER_VERSION
-      dockerfile: ./Dockerfile.docker
-      version: ${{ github.event.inputs.docker }}
-    secrets:
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-  dind:
-    name: Docker in Docker
-    needs:
-      - docker
-    uses: ./.github/workflows/_release.yml
-    with:
-      project: moby/moby
-      image: ubuntu-dind
-      variable: DOCKER_VERSION
-      dockerfile: ./Dockerfile.dind
-      version: ${{ github.event.inputs.docker }}
-    secrets:
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-  git:
-    name: git
-    uses: ./.github/workflows/_release.yml
-    with:
-      project: git/git
-      image: ubuntu-git
-      variable: GIT_VERSION
-      dockerfile: ./Dockerfile.git
-      version: ${{ github.event.inputs.git }}
-    secrets:
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_TOKEN }}
-
   runner:
     name: GitHub Runner
     needs:
@@ -72,13 +19,9 @@ jobs:
     uses: ./.github/workflows/_release.yml
     with:
       project: actions/runner
-      image: github-actions-runner
+      image: gh-runner-sysbox
       variable: GH_RUNNER_VERSION
-      dockerfile: ./Dockerfile
       version: ${{ github.event.inputs.runner }}
-      build-args: |
-        DOCKER_VERSION=${{ needs.dind.outputs.version }}
-        GIT_VERSION=${{ needs.git.outputs.version }}
     secrets:
       username: ${{ secrets.DOCKERHUB_USERNAME }}
       password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -106,7 +49,10 @@ jobs:
             versions and pull instructions [here][images]. Main generated GHCR
             image called `${{ needs.runner.outputs.image }}`.
 
-              [release]: https://github.com/actions/runner/releases/tag/v${{ needs.runner.outputs.version }}
-              [images]: https://github.com/${{ github.repository }}/pkgs/container/github-actions-runner-rootless%2Fgithub-actions-runner
+            This image also exists without the git sha suffix, i.e. with only the
+            SemVer of the runner release as a tag: `${{ steps.semver.outputs.version }}`.
+
+              [release]: https://github.com/actions/runner/releases/tag/v${{ steps.semver.outputs.version }}
+              [images]: https://github.com/${{ github.repository }}/pkgs/container/gh-runner-sysbox
           draft: false
           prerelease: false
