@@ -4,7 +4,7 @@ After=docker.service
 
 [Service]
 Type=oneshot
-ExecStart=/usr/local/bin/export.sh -u runner -- /etc/runner/runner.conf
+ExecStart=su -c '/usr/local/bin/export.sh -u runner -- /etc/runner/runner.conf' - root
 
 [Install]
 WantedBy=multi-user.target
