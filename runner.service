@@ -1,0 +1,14 @@
+[Unit]
+Description=GitHub Runner
+After=docker.service
+#StartLimitIntervalSec=0
+
+[Service]
+Type=oneshot
+User=runner
+WorkingDirectory=/actions-runner
+ExecStart=/usr/local/bin/runner.sh
+ExecReload=/usr/local/bin/runner.sh
+
+[Install]
+WantedBy=multi-user.target
