@@ -70,7 +70,7 @@ fi
 
 # Decide which URL to get the tar from, this depends on the current
 # architecture.
-arch=$(dependency arch -t "x86_64:x64 aarch64:amd64" -e 1)
+arch=$(dependency arch -t "x86_64:x64 aarch64:arm64" -e 1)
 url=https://github.com/actions/runner/releases/download/v${RUNNER_VERSION}/actions-runner-linux-${arch}-${RUNNER_VERSION}.tar.gz
 
 # Download and install
