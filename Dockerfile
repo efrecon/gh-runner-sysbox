@@ -37,8 +37,7 @@ LABEL org.opencontainers.image.created="${OCI_RFC3339}"
 #
 # Systemd installation
 #
-RUN apt-get update &&                            \
-    apt-get install -y --no-install-recommends   \
+RUN apt-install.sh                               \
             systemd                              \
             systemd-sysv                         \
             libsystemd0                          \
@@ -59,8 +58,8 @@ RUN apt-get update &&                            \
 # Make use of stopsignal (instead of sigterm) to stop systemd containers.
 STOPSIGNAL SIGRTMIN+3
 
-# install Docker and other dependencies
-RUN apt-get update && apt-get install --no-install-recommends -y      \
+# install Docker and other dependencies ((latest) git, jq, curl, etc.)
+RUN apt-install.sh                                                    \
        apt-transport-https                                            \
        ca-certificates                                                \
        curl                                                           \
@@ -70,20 +69,16 @@ RUN apt-get update && apt-get install --no-install-recommends -y      \
                                                                       \
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg           \
          | apt-key add - &&                                           \
-	                                                                    \
     apt-key fingerprint 0EBFCD88 &&                                   \
-                                                                      \
     add-apt-repository                                                \
        "deb [arch=amd64] https://download.docker.com/linux/ubuntu     \
        $(lsb_release -cs)                                             \
        stable" &&                                                     \
-                                                                      \
-    apt-get update && apt-get install --no-install-recommends -y      \
+    apt-install.sh                                                    \
        docker-ce docker-ce-cli containerd.io &&                       \
                                                                       \
     add-apt-repository ppa:git-core/ppa &&                            \
-    apt-get update && apt-get install --no-install-recommends -y      \
-       git &&                                                         \
+    apt-install.sh git &&                                             \
                                                                       \
     apt-clean.sh
 
@@ -91,7 +86,8 @@ RUN apt-get update && apt-get install --no-install-recommends -y      \
 # branch.
 RUN install-compose.sh -c "$COMPOSE_VERSION" -s "${COMPOSE_SWITCH_VERSION}"
 
-# Add and config runner user as sudo
+# Add and config `runner` user as sudo, arrange for members of sudo group to
+# skip password auth.
 RUN useradd -m runner \
     && usermod -aG sudo runner \
     && usermod -aG docker runner \
@@ -104,12 +100,13 @@ RUN install-runner.sh -v "${GH_RUNNER_VERSION}"
 USER root
 RUN ./bin/installdependencies.sh
 
+# Copy and schedule service units
 COPY runner*.service /lib/systemd/system/
-RUN ln -sf \
-      /lib/systemd/system/runner.service \
-      /etc/systemd/system/multi-user.target.wants/ && \
-    ln -sf \
-      /lib/systemd/system/runner-conf.service \
-      /etc/systemd/system/multi-user.target.wants/
+RUN for s in runner*.service; do \
+      ln -sf \
+        /lib/systemd/system/${s} \
+        /etc/systemd/system/multi-user.target.wants/; \
+    done
+
 # Set systemd as entrypoint.
 ENTRYPOINT [ "/sbin/init", "--log-level=err" ]

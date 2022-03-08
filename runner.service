@@ -1,6 +1,6 @@
 [Unit]
 Description=GitHub Runner
-After=runner-conf.service
+After=docker.service
 #StartLimitIntervalSec=0
 
 [Service]
