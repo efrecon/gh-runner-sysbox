@@ -8,7 +8,7 @@ After=runner-conf.service
 Type=oneshot
 User=runner
 WorkingDirectory=/actions-runner
-ExecStart=/usr/local/bin/hooks.sh RUNNER_PREFLIGHT_PATH
+ExecStart=/usr/local/bin/hook.sh RUNNER_PREFLIGHT_PATH
 EnvironmentFile=-/etc/runner/runner.conf
 
 [Install]
