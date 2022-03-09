@@ -48,15 +48,17 @@ if [ -n "${ACCESS_TOKEN}" ]; then
   _SHORT_URL=$(echo "${_TOKEN}" | jq -r .short_url)
 fi
 
-# Create directories if they do not exist.
+# Create directories if they do not exist. We use `sudo` to ensure we can access
+# the directories, and give them away to the current user, as it will be the
+# user running the runner (SIC).
 if ! [ -d "${_RUNNER_WORKDIR}" ]; then
   sudo mkdir -p "${_RUNNER_WORKDIR}"
-  sudo chown runner:runner "${_RUNNER_WORKDIR}"
+  sudo chown "$(id -u):$(id -g)" "${_RUNNER_WORKDIR}"
   INFO "Created working directory: ${_RUNNER_WORKDIR}"
 fi
 if [ -n "${RUNNER_TOOL_CACHE:-}" ] && ! [ -d "${RUNNER_TOOL_CACHE:-}" ]; then
   sudo mkdir -p "${RUNNER_TOOL_CACHE}"
-  sudo chown runner:runner "${RUNNER_TOOL_CACHE}"
+  sudo chown "$(id -u):$(id -g)" "${RUNNER_TOOL_CACHE}"
   INFO "Created tool cache directory: ${RUNNER_TOOL_CACHE}"
 fi
 
