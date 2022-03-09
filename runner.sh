@@ -14,7 +14,7 @@ done
 
 deregister_runner() {
   INFO "Caught SIGTERM. Deregistering runner"
-  _TOKEN=$(token.sh)
+  _TOKEN=$(token.sh remove-token)
   RUNNER_TOKEN=$(echo "${_TOKEN}" | jq -r .token)
   ./config.sh remove --token "${RUNNER_TOKEN}"
 
@@ -43,7 +43,7 @@ if [ "${ORG_RUNNER}" = "true" ]; then
 fi
 
 if [ -n "${ACCESS_TOKEN}" ]; then
-  _TOKEN=$(token.sh)
+  _TOKEN=$(token.sh registration-token)
   RUNNER_TOKEN=$(echo "${_TOKEN}" | jq -r .token)
   _SHORT_URL=$(echo "${_TOKEN}" | jq -r .short_url)
 fi

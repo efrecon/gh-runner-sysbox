@@ -10,6 +10,24 @@ for d in "$(dirname "$0")/lib" /usr/local/share/runner; do
   fi
 done
 
+if [ "$#" = "0" ]; then
+  ERROR "You must provide the type of the token to create"
+  exit 1
+fi
+
+if printf %s\\n "$1" | grep -qE '\-token$'; then
+  _TYPE=$1
+else
+  case "$1" in
+    reg*)
+      _TYPE=registration-token;;
+    de* | un* | rem*)
+      _TYPE=remove-token;;
+    *)
+      ERROR "$1 unknown token type" && exit 1;;
+  esac
+fi
+
 _ORG_RUNNER=${ORG_RUNNER:-false}
 _GITHUB_HOST=${GITHUB_HOST:="github.com"}
 
@@ -32,10 +50,10 @@ _PATH="$(echo "${_URL}" | grep / | cut -d/ -f2-)"
 _ACCOUNT="$(echo "${_PATH}" | cut -d/ -f1)"
 _REPO="$(echo "${_PATH}" | cut -d/ -f2)"
 
-_FULL_URL="${URI}/repos/${_ACCOUNT}/${_REPO}/actions/runners/registration-token"
+_FULL_URL="${URI}/repos/${_ACCOUNT}/${_REPO}/actions/runners/${_TYPE}"
 if [ "${_ORG_RUNNER}" = "true" ]; then
-  [ -z "${ORG_NAME}" ] && ( ERROR "ORG_NAME required for org runners"; exit 1 )
-  _FULL_URL="${URI}/orgs/${ORG_NAME}/actions/runners/registration-token"
+  [ -z "${ORG_NAME:-}" ] && ( ERROR "ORG_NAME required for org runners"; exit 1 )
+  _FULL_URL="${URI}/orgs/${ORG_NAME}/actions/runners/${_TYPE}"
   _SHORT_URL="${_PROTO}${_GITHUB_HOST}/${ORG_NAME}"
 else
   _SHORT_URL=$REPO_URL
