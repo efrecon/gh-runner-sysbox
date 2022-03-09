@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -eu
+
 for d in "$(dirname "$0")/lib" /usr/local/share/runner; do
   if [ -d "$d" ]; then
     for m in logger utils; do
@@ -46,7 +48,16 @@ if [ -n "${ACCESS_TOKEN}" ]; then
   _SHORT_URL=$(echo "${_TOKEN}" | jq -r .short_url)
 fi
 
-INFO "Configuring runner $_RUNNER_NAME (in group: $_RUNNER_GROUP), labels: $_LABELS"
+# Create directories if they do not exist.
+if ! [ -d "${_RUNNER_WORKDIR}" ]; then
+  mkdir -p "${_RUNNER_WORKDIR}"
+  INFO "Created working directory: ${_RUNNER_WORKDIR}"
+fi
+if [ -n "${RUNNER_TOOL_CACHE:-}" ] && ! [ -d "${RUNNER_TOOL_CACHE:-}" ]; then
+  mkdir -p "${RUNNER_TOOL_CACHE}"
+  INFO "Created tool cache directory: ${RUNNER_TOOL_CACHE}"
+fi
+
 ./config.sh \
     --url "${_SHORT_URL}" \
     --token "${RUNNER_TOKEN}" \
@@ -56,6 +67,7 @@ INFO "Configuring runner $_RUNNER_NAME (in group: $_RUNNER_GROUP), labels: $_LAB
     --runnergroup "${_RUNNER_GROUP}" \
     --unattended \
     --replace
+INFO "Configured runner $_RUNNER_NAME (in group: $_RUNNER_GROUP), labels: $_LABELS"
 
 unset RUNNER_TOKEN
 trap deregister_runner INT QUIT TERM
