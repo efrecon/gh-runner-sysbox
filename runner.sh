@@ -50,11 +50,13 @@ fi
 
 # Create directories if they do not exist.
 if ! [ -d "${_RUNNER_WORKDIR}" ]; then
-  mkdir -p "${_RUNNER_WORKDIR}"
+  sudo mkdir -p "${_RUNNER_WORKDIR}"
+  sudo chown runner:runner "${_RUNNER_WORKDIR}"
   INFO "Created working directory: ${_RUNNER_WORKDIR}"
 fi
 if [ -n "${RUNNER_TOOL_CACHE:-}" ] && ! [ -d "${RUNNER_TOOL_CACHE:-}" ]; then
-  mkdir -p "${RUNNER_TOOL_CACHE}"
+  sudo mkdir -p "${RUNNER_TOOL_CACHE}"
+  sudo chown runner:runner "${RUNNER_TOOL_CACHE}"
   INFO "Created tool cache directory: ${RUNNER_TOOL_CACHE}"
 fi
 
