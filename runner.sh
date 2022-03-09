@@ -35,7 +35,7 @@ _RUNNER_NAME=${RUNNER_NAME:-${RUNNER_NAME_PREFIX:-github-runner}-$(head /dev/ura
 _RUNNER_WORKDIR=${RUNNER_WORKDIR:-/actions-runner/_work}
 _LABELS=${LABELS:-default}
 _RUNNER_GROUP=${RUNNER_GROUP:-Default}
-_SHORT_URL=${REPO_URL}
+_SHORT_URL=${REPO_URL:-}
 _GITHUB_HOST=${GITHUB_HOST:="github.com"}
 
 if [ "${ORG_RUNNER}" = "true" ]; then
