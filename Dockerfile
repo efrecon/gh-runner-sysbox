@@ -111,4 +111,4 @@ RUN for s in systemd/runner*.service; do \
     done
 
 # Set systemd as entrypoint.
-ENTRYPOINT [ "/sbin/init", "--log-level=err" ]
+ENTRYPOINT [ "/sbin/init", "--log-level=info", "--log-target=console" ]
