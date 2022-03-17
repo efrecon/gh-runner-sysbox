@@ -9,6 +9,9 @@ ARG GH_RUNNER_VERSION="latest"
 ARG COMPOSE_VERSION=latest
 ARG COMPOSE_SWITCH_VERSION=latest
 
+# Copy our "library" and all necessary shell-wrappers. Note that some of the
+# wrappers that we install will be used to build the image itself, i.e. as part
+# of some of the `RUN` commands below.
 COPY lib/*.sh /usr/local/share/runner/
 COPY *.sh /usr/local/bin/
 
@@ -110,5 +113,6 @@ RUN for s in systemd/runner*.service; do \
         /etc/systemd/system/multi-user.target.wants/; \
     done
 
-# Set systemd as entrypoint.
+# Set systemd as entrypoint. There will hardly be any logs, use `journalctl`
+# from within instead.
 ENTRYPOINT [ "/sbin/init", "--log-level=err" ]

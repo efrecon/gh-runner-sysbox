@@ -1,11 +1,13 @@
 # GitHub Actions Runner
 
-This project implements a self-hosted GitHub Actions Runner. The project
-implements a Docker image for setting up, running and [registering][register] a
-runner within an Organisation or a Repository. This image **depends** on
-[sysbox], an alternative OCI runtime. [sysbox] makes it possible to run Docker
-in Docker (DinD) without having to rely on elevated privileges.
+This project implements a self-hosted GitHub Actions Runner, tuned for use from
+within Kubernetes clusters. The project implements an [Ubuntu][ubuntu]-based
+Docker image for setting up, running and [registering][register] a runner within
+an Organisation or a Repository. This image **requires** [sysbox], an
+alternative OCI runtime. [sysbox] makes it possible to run Docker in Docker
+(DinD) without having to rely on elevated privileges.
 
+  [ubuntu]: https://hub.docker.com/_/ubuntu
   [register]: https://docs.github.com/en/actions/hosting-your-own-runners/adding-self-hosted-runners
   [sysbox]: https://github.com/nestybox/sysbox
 
@@ -14,20 +16,24 @@ in Docker (DinD) without having to rely on elevated privileges.
 * Dynamic registration of the runner at GitHub.
 * Runner registration for an entire organisation, or for a repository.
 * Support for both enterprise installations, and `github.com`.
-* Support for labels and groups to categorise runners.
+* Support for [labels] and [groups] to categorise runners.
 * Able to run all [types] of actions, including [Docker][container-action]
   container actions!
-* Multi-platform support.
-* Each runner can be customised through running a series of script/programs
-  prior to registration at the GitHub server.
+* Multi-platform [support](#supported-arhitectures).
+* Each runner can be customised/configured through running a series of
+  script/programs prior to registration at the GitHub server.
 * Automatically [follows](#releases) the [release] tempo of the official
   [runner]. Generated images will be tagged with the SemVer of the release.
-* `latest` tag will correspond to latest [release] of the [runner].
+* `latest` tag will correspond to latest [release] of the [runner] and this
+  project.
 * Fully automated [workflows](.github/workflows/README.md), manual interaction
   possible.
 * Comes bundled with latest `docker compose` (v2, the plugin), together with the
-  `docker-compose` [shim].
+  `docker-compose` [shim] and a few other essential [tools](#available-tools).
+* Within containers, workflows are executed by a regular user called `runner`.
 
+  [labels]: https://docs.github.com/en/actions/hosting-your-own-runners/using-labels-with-self-hosted-runners
+  [groups]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-access-to-self-hosted-runners-using-groups
   [types]: https://docs.github.com/en/actions/creating-actions/about-custom-actions#types-of-actions
   [container-action]: https://docs.github.com/en/actions/creating-actions/creating-a-docker-container-action
   [release]: https://github.com/actions/runner/releases
@@ -35,6 +41,9 @@ in Docker (DinD) without having to rely on elevated privileges.
   [shim]: https://github.com/docker/compose-switch
 
 ## Environment Variables
+
+This runner recognises the following environment variables for its
+configuration.
 
 | Environment Variable | Description |
 | --- | --- |
@@ -55,9 +64,10 @@ in Docker (DinD) without having to rely on elevated privileges.
 
 ## Available Tools
 
-These images do **not** contain **all** the tools that GitHub offers by default
-in their runners. Workflows might work improperly when running from within these
-runners. The [Dockerfile](./Dockerfile) for the runner images ensures:
+This images does **not** contain **all** the tools that GitHub offers by default
+in their runners. Workflows might work improperly when running from within
+runners created using this image. The [Dockerfile](./Dockerfile) for the runner
+images ensures:
 
 * An installation of the Docker daemon, including the `docker` cli binary.
 * An installation of Docker [compose]. Unless otherwise specified, the latest
@@ -65,10 +75,77 @@ runners. The [Dockerfile](./Dockerfile) for the runner images ensures:
   At the time of writing, this installs the latest `2.x` branch, rewritten in
   golang, including the `docker-compose` compatibility [shim].
 * An installation of `git` that is compatible with the github runner code.
-  Unless otherwise specified, the latest stable version at the time of image
-  building will be automatically picked up. This is because the default version
-  available in Ubuntu is too old.
+  Unless otherwise specified, the latest stable [version][git-release] at the
+  time of image building will be automatically picked up. This is because the
+  default version available in Ubuntu is too old.
 * The `build-essential` package, in order to facilitate compilation.
+
+  [compose]: https://github.com/docker/compose
+  [git-release]: https://launchpad.net/~git-core/+archive/ubuntu/ppa
+
+## Releases
+
+By default,the image follows the release tempo of the main [runner][release]
+project. New images with the semantic version as a tag will be made available
+shortly after a new [release] is made. There also exist tags that combine the
+version of the runner and the short commit SHA of this project. These tags are
+aimed at picking the proper combination, if necessary and when changes have been
+applied to this project, which happens seldom. See
+[here](.github/workflows/README.md) for more details.
+
+## Known Limitations
+
+### Logging
+
+Containers created with this image will not have any log output. This is because
+the runner (and the services that are started prior to the runner) are started
+as systemd units. To get their logs, you will have to jump into the container,
+and from an interactive shell (`bash` available) request for their logs through
+`journalctl`. See [this](./systemd/README.md) for the list of relevant services.
+
+### PV Mounts
+
+When running from within kubernetes, you might not be able to use persistent
+volumes, e.g. for the tool cache or the working directory. After some time, you
+might loose the mount inside the container. This has been reported when `sysbox`
+was installed on older kernels (Ubuntu 20.04 LTS) and with `shiftfs`. Using
+local mounts, e.g. [`emptyDir`][emptyDir] works.
+
+  [emptyDir]: https://kubernetes.io/docs/concepts/storage/volumes/#emptydir
+
+### Coexistence of `sysbox` Containers
+
+Our experience has shown that it is not always possible to run several `sysbox`
+containers on the same Kubernetes node. To circumvent this limitation, you
+should:
+
+* Arrange for kubernetes to terminate Pods before is starts new ones (otherwise,
+  there might be two Pods running on the same node during rollouts: one waiting
+  to be up, and one still there, soon to be terminated).
+* Force spreading your Pods across the nodes of your cluster.
+
+To enforce termination, add the following snippet to your Deployment
+specification:
+
+```yaml
+  strategy:
+    type: Recreate
+```
+
+To enforce spreading across nodes, add the following snippet to your Pod
+specification. This creates topology groups of one single member, per the name
+of the node. You should adapt the label to whatever label you have chosen.
+
+```yaml
+      topologySpreadConstraints:
+        -
+          maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              app: gh-runner-sysbox
+```
 
 ## Acknowledgments
 
