@@ -9,6 +9,7 @@ User=runner
 WorkingDirectory=/actions-runner
 ExecStart=/usr/local/bin/runner.sh
 EnvironmentFile=-/etc/runner/runner.conf
+UMask=0002
 
 [Install]
 WantedBy=multi-user.target

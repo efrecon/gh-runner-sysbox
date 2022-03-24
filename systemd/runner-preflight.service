@@ -3,13 +3,13 @@ Description=GitHub Runner Pre-Flight Init
 Before=docker.service
 After=runner-conf.service
 
-
 [Service]
 Type=oneshot
 User=runner
 WorkingDirectory=/actions-runner
 ExecStart=/usr/local/bin/hook.sh RUNNER_PREFLIGHT_PATH
 EnvironmentFile=-/etc/runner/runner.conf
+UMask=0002
 
 [Install]
 WantedBy=multi-user.target

@@ -21,3 +21,11 @@ enabled at the runner. These are (in order of execution):
 + `runner` is the main service and in charge of starting the runner. The service
   will pick the environment from above (first service) and start the runner, via
   [`runner.sh`](../runner.sh), as the `runner` user.
+
+## File Access Mode
+
+The unit in charge for stealing the configuration restricts the copy of the
+environment to only be accessible to the `runner` user. Other units, instead,
+will relax so that all members of the group `runner` also have access to the
+files/directories created from sub-processes of the unit. This is to facilitate
+usage in `sysbox` when `shiftfs` is turned off.

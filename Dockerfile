@@ -98,6 +98,10 @@ RUN useradd -m runner \
     && usermod -aG docker runner \
     && echo "%sudo   ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers
 
+# Make the root user explicitely member of the runner group. This is to ease
+# file access from Dockerfile GH actions (which are run as a root).
+RUN usermod -a -G runner root
+
 WORKDIR /actions-runner
 RUN chown runner:runner /actions-runner
 USER runner

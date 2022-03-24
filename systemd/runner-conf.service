@@ -10,6 +10,7 @@ Before=docker.service
 [Service]
 Type=oneshot
 ExecStart=/usr/local/bin/export.sh -u runner -p 1 -- /etc/runner/runner.conf
+UMask=0077
 
 [Install]
 WantedBy=multi-user.target
