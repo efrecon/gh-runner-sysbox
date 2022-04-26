@@ -7,9 +7,13 @@ an Organisation or a Repository. This image **requires** [sysbox], an
 alternative OCI runtime. [sysbox] makes it possible to run Docker in Docker
 (DinD) without having to rely on elevated privileges.
 
+This project is a friendly [fork] in order to provide some level of support on a
+voluntary basis.
+
   [ubuntu]: https://hub.docker.com/_/ubuntu
   [register]: https://docs.github.com/en/actions/hosting-your-own-runners/adding-self-hosted-runners
   [sysbox]: https://github.com/nestybox/sysbox
+  [fork]: https://github.com/Mitigram/gh-runner-sysbox
 
 ## Features
 
